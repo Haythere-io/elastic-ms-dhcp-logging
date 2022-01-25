@@ -47,4 +47,7 @@ sudo rm /opt/oui.txt
 ```
 
 ## Create the Logstash pipeline config
-Place this logstash [config file](logstash-ms-dhcp-pipeline.yml)  in de /etc/logstash/conf.d folder or create a logstash ingest pipeline in Kibana. (depending on your license and config method)
+
+* Place this logstash [config file](logstash-ms-dhcp-pipeline.yml)  in de /etc/logstash/conf.d folder or create a logstash ingest pipeline in Kibana. (depending on your license and config method)
+* Make sure you change the input port to your environment
+* Make sure you change the ouput to match your environment
