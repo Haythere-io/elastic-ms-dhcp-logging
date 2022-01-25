@@ -2,6 +2,7 @@
 Log collection of MS Dhcp logs in Elasticsearch
 With big thanks to Guy Bruneau and his blog post at https://isc.sans.edu/diary/27198
 His blogpost was a great help but needed a little tweaking to get things working. All data here is from his blogpost. I modified the template, index initialisation, grok pattern and logstash pipeline filter.
+I did not include the dashboard because I think it is better to create your own.
 
 ## Create the ilm policy.
 
