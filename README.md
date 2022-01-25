@@ -23,3 +23,14 @@ PUT _template/microsoft.dhcp
  <insert content of ms-dhcp-template.yml here>
 }
 ```
+
+## Initialise the index
+
+Initialising the index helps with proper alias setup.
+Initialise the index with the following command
+```
+PUT microsoft.dhcp-<yyyy.mm.dd>-000001
+{
+ <insert content of ms-dhcp-index-initialise.yml here>
+}
+```
