@@ -3,7 +3,9 @@ Log collection of MS Dhcp logs in Elasticsearch
 With big thanks to Guy Bruneau and his blog post at https://isc.sans.edu/diary/27198
 His blogpost was a great help but needed a little tweaking to get things working.
 
-## Start By creating the ilm policy.
+## Create the ilm policy.
+
+Start by adding the ilm policy with the following command in the Kibana Dev tools.
 
 ```
 PUT  _ilm/policy/microsoft.dhcp
@@ -12,3 +14,12 @@ PUT  _ilm/policy/microsoft.dhcp
 }
 ```
 
+## Create the index template
+
+Add the template with the following command:
+```
+PUT _template/microsoft.dhcp
+{
+ <insert content of ms-dhcp-template.yml here>
+}
+```
