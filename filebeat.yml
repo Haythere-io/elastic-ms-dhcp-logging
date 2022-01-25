@@ -1,0 +1,29 @@
+# This filebeat shipper is used with
+# for Microsoft DHCP logs
+
+# 9 Jan 2021
+# Version: 1.0
+
+filebeat.inputs:
+
+# Filebeat input for Microsoft DHCP logs
+
+- type: log
+  paths:
+    - "C:/Windows/System32/dhcp/DhcpSrvLog-*.log"
+  include_lines: ["^[0-9]{2},"]
+  fields_under_root: true
+
+#==================== Queued Event ====================
+#queue.mem:
+#  events: 4096
+#  flush.min_events: 512
+#  flush.timeout: 5s
+
+#queue.disk:
+#  path: "/op/filebeat/diskqueue"
+#  max_size: 10GB
+
+#==================== Output Event ====================
+output.logstash:
+  hosts: ["logstash:5044"]
