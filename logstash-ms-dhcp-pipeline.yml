@@ -1,0 +1,287 @@
+# Guy Bruneau, guybruneau@outlook.com
+# Date: 5 March 2021
+# Version: 0.5
+#
+# Based on Elastic Common Schema (ECS) format
+#
+# This is a Windows 2012r2 DHCP log parser
+# Parser based on packetbeat ECS meta: https://www.elastic.co/guide/en/beats/packetbeat/master/exported-fields-dhcpv4.html
+# The logs are located at: Log location: C:\Windows\System32\dhcp
+# Filename: DhcpSrvLog-*.log and DhcpV6SrvLog-*.log
+
+# Format:
+# ID,Date,Time,Description,IP Address,Host Name,MAC Address,User Name, TransactionID, QResult,Probationtime, CorrelationID,Dhcid,VendorClass(Hex),VendorClass(ASCII),UserClass(Hex),UserClass(ASCII),RelayAgentInformation,DnsRegError.
+
+# This is the input file that connect with filebeat
+# This is a default confirmation to allow log collection
+
+input {
+  beats {
+    port => "5044"
+  }
+}
+
+filter {
+
+# This example uses the IPv4 filename to parse the data
+  if [log][file][path] =~ "DhcpSrvLog-" {
+    grok {
+      match => {
+        "message" => [
+        "^%{INT:[dhcpv4][id]},(?<timestamp>(%{MONTHNUM}\/%{MONTHDAY}\/%{YEAR},%{HOUR}:%{MINUTE}:%{SECOND})),%{GREEDYDATA:[dhcpv4][option][message_type]}?((,%{IP:[dhcpv4][client_ip]},%{DATA:[dhcpv4][option][hostname]},%{DATA:[dhcpv4][client_mac]},%{DATA:[user][name]})|(,%{IP:[dhcpv4][client_ip]},%{DATA:[dhcpv4][option][hostname]},%{DATA:[dhcpv4][client_mac]},,)|(,,%{DATA:[dhcpv4][option][hostname]},,)|(,,,,)),%{WORD:[dhcpv4][transaction_id]},%{WORD:[dhcpv4][op_code]},,,,%{DATA:[dhcpv4][option][class_identifier]},%{DATA:[dhcpv4][option][vendor_identifying_options]}?((,,,,)|(,,,)|,%{WORD:[dhcpv4][option][user_identifying_options]},%{WORD:[dhcpv4][option][relay_agent_information]},,|,%{WORD:[dhcpv4][option][user_identifying_options]},%{DATA:[dhcpv4][option][relay_agent_information]},,|,%{WORD:[dhcpv4][option][user_identifying_options]},,%{WORD:[dhcpv4][option][relay_agent_information]},|,%{WORD:[dhcpv4][option][user_class_identifier_hex]},%{DATA:[dhcpv4][option][user_class_identifier]},%{WORD:[dhcpv4][option][relay_agent_information]},)%{WORD:[dhcpv4][option][message]}"
+        ]
+      }
+    }
+  }
+}
+
+# Adding several default fields to metatada
+
+filter {
+  if [log][file][path] =~ "DhcpSrvLog-" {
+    mutate {
+      add_field => { "[event][category]" => "network, network_traffic" }
+      add_field => { "[event][dataset]" => "dhcpv4" }
+      add_field => { "[event][kind]" => "event" }
+      add_field => { "[event][type]" => "connection, protocol" }
+      add_field => { "[network][transport]" => "udp" }
+      add_field => { "[host][os][family]" => "windows" }
+      add_field => { "[host][os][name]" => "windows" }
+      add_field => { "[host][os][platform]" => "windows" }
+      add_field => { "[process][name]" => "microsoft.dhcp" }
+      add_field => { "[dhcpv4][hardware_type]" => "Ethernet" }
+      add_field => { "[network][protocol]" => "dhcpv4" }
+      add_field => { "[network][type]" => "ipv4" }
+    }
+  }
+}
+
+# Rename the dhcpv4.op_code from its number to its name
+# QResult: 0: NoQuarantine, 1:Quarantine, 2:Drop Packet, 3:Probation,6:No Quarantine Information ProbationTime:Year-Month-Day Hour:Minute:Second:MilliSecond.
+
+filter {
+  if "0" in [dhcpv4][op_code] {
+    mutate {
+      gsub => [
+        "[dhcpv4][op_code]", "0", "No Quarantine"
+      ]
+    }
+  }
+  if "1" in [dhcpv4][op_code] {
+    mutate {
+      gsub => [
+        "[dhcpv4][op_code]", "1", "Quarantine"
+      ]
+    }
+  }
+  if "2" in [dhcpv4][op_code] {
+    mutate {
+      gsub => [
+        "[dhcpv4][op_code]", "2", "Drop Packet"
+      ]
+    }
+  }
+  if "3" in [dhcpv4][op_code] {
+    mutate {
+      gsub => [
+        "[dhcpv4][op_code]", "3", "Probation"
+      ]
+    }
+  }
+  if "6" in [dhcpv4][op_code] {
+    mutate {
+      gsub => [
+        "[dhcpv4][op_code]", "6", "No Quarantine Information Probation Time"
+      ]
+    }
+  }
+}
+
+# Add description for ID field
+
+filter {
+  if "00" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "The log was started" }
+    }
+  }
+  if "01" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "The log was stopped" }
+    }
+  }
+  if "02" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "The log was temporarily paused due to low disk space" }
+    }
+  }
+  if "10" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A new IP address was leased to a client" }
+    }
+  }
+  if "11" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease was renewed by a client" }
+    }
+  }
+  if "12" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease was released by a client" }
+    }
+  }
+  if "13" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "An IP address was found to be in use on the network" }
+    }
+  }
+  if "14" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease request could not be satisfied because the scope's address pool was exhausted" }
+    }
+  }
+  if "15" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease was denied" }
+    }
+  }
+  if "16" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease was deleted" }
+    }
+  }
+  if "17" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease was expired and DNS records for an expired leases have not been deleted" }
+    }
+  }
+  if "18" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A lease was expired and DNS records were deleted" }
+    }
+  }
+  if "20" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A BOOTP address was leased to a client" }
+    }
+  }
+  if "21" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A dynamic BOOTP address was leased to a client" }
+    }
+  }
+  if "22" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A BOOTP request could not be satisfied because the scope's address pool for BOOTP was exhausted" }
+    }
+  }
+  if "23" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "A BOOTP IP address was deleted after checking to see it was not in use" }
+    }
+  }
+  if "24" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "IP address cleanup operation has began" }
+    }
+  }
+  if "25" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "IP address cleanup statistics" }
+    }
+  }
+  if "30" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "DNS update request to the named DNS server" }
+    }
+  }
+  if "31" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "DNS update failed" }
+    }
+  }
+  if "32" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "DNS update successful" }
+    }
+  }
+  if "33" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "Packet dropped due to NAP policy" }
+    }
+  }
+  if "34" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "DNS update request failed.as the DNS update request queue limit exceeded" }
+    }
+  }
+  if "35" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "DNS update request failed" }
+    }
+  }
+  if "36" in [dhcpv4][id] {
+    mutate {
+      add_field => { "[event][reason]" => "Packet dropped because the server is in failover standby role or the hash of the client ID does not match" }
+    }
+  }
+}
+
+# http://joda-time.sourceforge.net/timezones.html
+# Converting timestamp to accepted format
+# "timestamp": "03/01/21,06:27:57"
+
+filter {
+  date {
+    match => ["timestamp", "MM/dd/YY,HH:mm:ss"]
+    timezone => "UTC"
+    target => "@timestamp"
+  }
+}
+
+# Get OUI list from the web and convert it into a CSV list
+# Delete tabs, spaces and @ 
+# wget http://standards-oui.ieee.org/oui/oui.txt
+# Create the list in the /opt directory and run the following command to create the OUI file
+# cat /opt/oui.txt | grep 'base 16' |sed -e 's/\([[:xdigit:]]\{6\}\).*(base 16)\t\t\(.*\)\r/"\1": \2/gi' | tr -d '@' > /opt/oui.yml
+
+filter {
+  if [dhcpv4][option][message_type] == "Assign" or [dhcpv4][option][message_type] == "Renew" 
+  or [dhcpv4][option][message_type] == "NACK" {
+    grok {
+      # split the mac address into 2 elements
+      match => [ "[dhcpv4][client_mac]", "(?<dhcpv4.ouiprefix>.{6})(?<dhcpv4.ouisuffix>.*)" ]
+    }
+     # lookup the ouiprefix in the YML file and add new oui field
+    translate {
+      dictionary_path => "/opt/oui.yml"
+      field      => "[dhcpv4.ouiprefix]"
+      destination => "[dhcpv4][option][mac_vendor]"
+      fallback => "N/A"
+    }
+  }
+}
+
+# Delete temporary fields
+
+filter {
+  mutate {
+    remove_field => [ "dhcpv4.ouiprefix" ]
+    remove_field => [ "dhcpv4.ouisuffix" ]
+  }
+}
+
+
+output {
+  if [log][file][path] =~ "DhcpSrvLog" {
+    elasticsearch {
+    hosts => ["localhost:9200"]
+    user => "UserName"
+    password => "ChangeMe"
+    index => "microsoft.dhcp-%{+yyyy.MM.dd}-%{index_num}"
+    ilm_rollover_alias => "microsoft.dhcp"
+    ilm_pattern => "{now/d}-000001"
+    ilm_policy => "microsoft.dhcp"
+  }
+  }
+}
