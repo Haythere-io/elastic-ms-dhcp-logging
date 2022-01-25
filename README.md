@@ -45,3 +45,6 @@ sudo wget http://standards-oui.ieee.org/oui/oui.txt
 sudo cat /opt/oui.txt | grep 'base 16' |sed -e 's/\([[:xdigit:]]\{6\}\).*(base 16)\t\t\(.*\)\r/"\1": \2/gi' | tr -d '@' > /opt/oui.yml
 sudo rm /opt/oui.txt
 ```
+
+## Create the Logstash pipeline config
+Place this logstash [config file]()  in de /etc/logstash/conf.d folder or create a logstash ingest pipeline in Kibana. (depending on your license and config method)
